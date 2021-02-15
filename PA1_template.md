@@ -1,0 +1,85 @@
+---
+title: "Reproducible_Research_Project_Week 2"
+output: html_document
+---
+## Peer-graded Assignment: Course Project 1
+
+Downloading data from a local folder "...Coursera_R/Reproducible_Research"
+Also echoing (showing all code) with echo = TRUE
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+my_folder <- "C:/Users/thejt/Desktop/MOOC/Coursera_R/Reproducible_Research/"
+activity <- read.csv(paste(my_folder,"activity.csv", sep = ""))
+```
+
+Determining if a day in the data set is a weekend or a weekday
+```{r, include=TRUE}
+activity$dayofWeek  <- weekdays(as.Date(activity$date))
+activity$weekend    <- as.POSIXlt(activity$date)$wday == "0" | as.POSIXlt(activity$date)$wday == "6"
+```
+
+Counting the steps per day and creating a histogram
+```{r, include=TRUE}
+stepsperDay         <- aggregate(activity$steps, by = list(activity$date), sum, na.rm = TRUE )
+hist(stepsperDay$x, main = "Histogram of the total number of steps taken each day", 
+     xlab = "Steps", ylab = "Frequency over a 61 day period", breaks = 15)
+```
+
+The mean and median number of steps taken is shown here:
+```{r, include=TRUE}
+stepsbyDate         <- aggregate(activity$steps, by = list(activity$date), sum,    na.rm = TRUE)
+meanSteps           <- mean(stepsbyDate$x, na.rm = TRUE)
+medianSteps         <- median(stepsbyDate$x, na.rm = TRUE)
+```
+
+The mean and median number of steps are: `r meanSteps` & `r medianSteps`
+
+The average number of steps taken per week is shown here:
+```{r, include=TRUE}
+stepsbyDate$weekofyear    <- strftime((stepsbyDate$Group.1), format = "%V")
+stepsbyweekNum      <- aggregate(stepsbyDate$x, by = list(stepsbyDate$weekofyear), mean, na.rm = TRUE)
+barplot(height = stepsbyweekNum$x, width = 1, ylab = "Average Steps per Day", xlab = "Week", 
+        main = "Plot of the average number of steps taken, by week")
+```
+
+Let's look for the 5 minute interval that averages the maximim number of steps
+```{r, include=TRUE}
+stepsbyInterval <- aggregate(activity$steps, by = list(activity$interval), mean, na.rm = TRUE)
+max.value = max(stepsbyInterval$x)
+plot(stepsbyInterval$x, type = "l", main = "Average steps per time interval")
+max.intervalue <- stepsbyInterval$Group.1[stepsbyInterval$x==max(stepsbyInterval$x)]
+```
+
+The maximum value of the above chart is `r max.value` and belongs to the interval of name `r max.intervalue`
+
+Now we need to impute the missing values where the value NA appears in the steps column.
+I am going to use the existing mean for the time interval to patch the data frame.
+```{r, include=TRUE}
+activity$steps[is.na(activity$steps)]<-stepsbyInterval$x
+stepsperDayclean         <- aggregate(activity$steps, by = list(activity$date), sum, na.rm = TRUE )
+hist(stepsperDayclean$x, main = "Histogram of the total number of steps taken each day", 
+     xlab = "Steps", ylab = "Frequency over a 61 day period", breaks = 15)
+```
+
+The histogram for steps per day looks better.  On the left hand side of the chart, there are not as 
+many values attributed to the first bar where the NAs would normally show.
+
+Now we can compare weekends and weekdays
+```{r, include=TRUE}
+stepsWeekend <- subset(activity, weekend == TRUE)
+stepsWeekday <- subset(activity, weekend == FALSE)
+
+weekendstepsbyInterval <- aggregate(stepsWeekend$steps, by = list(stepsWeekend$interval), mean, na.rm = TRUE)
+weekdaystepsbyInterval <- aggregate(stepsWeekday$steps, by = list(stepsWeekday$interval), mean, na.rm = TRUE)
+
+par(mfrow = c(1,2))
+plot(weekendstepsbyInterval$x, type = "l", main = "Weekends",
+     ylab = "Steps", xlab = "5 Minute Interval", ylim = c(1,207))
+plot(weekdaystepsbyInterval$x, type = "l", main = "Weekdays",
+      ylab = "", xlab = "5 Minute Interval", ylim = c(1,207))
+```
+
+We can see that the weekdays have a "usual time" where lots of steps are occuring.  This is probably a
+commute to a job or could be daily exercise.  The weekends involve more steps and likely less sitting 
+at a desk.
+
